@@ -1,5 +1,7 @@
 #include <memory>
+#include <optional>
 #include <tuple>
+#include <vector>
 #include "binder/bound_expression.h"
 #include "binder/bound_statement.h"
 #include "binder/expressions/bound_agg_call.h"
@@ -7,16 +9,20 @@
 #include "binder/expressions/bound_binary_op.h"
 #include "binder/expressions/bound_column_ref.h"
 #include "binder/expressions/bound_constant.h"
+#include "binder/expressions/bound_func_call.h"
 #include "binder/expressions/bound_unary_op.h"
+#include "binder/expressions/bound_window.h"
 #include "binder/statement/select_statement.h"
 #include "common/exception.h"
 #include "common/macros.h"
 #include "common/util/string_util.h"
+#include "execution/expressions/abstract_expression.h"
 #include "execution/expressions/column_value_expression.h"
 #include "execution/expressions/constant_value_expression.h"
 #include "execution/plans/abstract_plan.h"
 #include "fmt/format.h"
 #include "planner/planner.h"
+#include "type/value_factory.h"
 
 namespace bustub {
 
@@ -52,7 +58,7 @@ auto Planner::PlanColumnRef(const BoundColumnRef &expr, const std::vector<Abstra
       }
     }
     uint32_t col_idx = schema.GetColIdx(col_name);
-    auto col_type = schema.GetColumn(col_idx).GetType();
+    auto col_type = schema.GetColumn(col_idx);
     return std::make_tuple(col_name, std::make_shared<ColumnValueExpression>(0, col_idx, col_type));
   }
   if (children.size() == 2) {
@@ -82,11 +88,11 @@ auto Planner::PlanColumnRef(const BoundColumnRef &expr, const std::vector<Abstra
       throw bustub::Exception(fmt::format("ambiguous column name {}", col_name));
     }
     if (col_idx_left) {
-      auto col_type = left_schema.GetColumn(*col_idx_left).GetType();
+      auto col_type = left_schema.GetColumn(*col_idx_left);
       return std::make_tuple(col_name, std::make_shared<ColumnValueExpression>(0, *col_idx_left, col_type));
     }
     if (col_idx_right) {
-      auto col_type = right_schema.GetColumn(*col_idx_right).GetType();
+      auto col_type = right_schema.GetColumn(*col_idx_right);
       return std::make_tuple(col_name, std::make_shared<ColumnValueExpression>(1, *col_idx_right, col_type));
     }
     throw bustub::Exception(fmt::format("column name {} not found", col_name));
@@ -117,6 +123,13 @@ void Planner::AddAggCallToContext(BoundExpression &expr) {
       auto &binary_op_expr = dynamic_cast<BoundBinaryOp &>(expr);
       AddAggCallToContext(*binary_op_expr.larg_);
       AddAggCallToContext(*binary_op_expr.rarg_);
+      return;
+    }
+    case ExpressionType::FUNC_CALL: {
+      auto &func_call_expr = dynamic_cast<BoundFuncCall &>(expr);
+      for (const auto &child : func_call_expr.args_) {
+        AddAggCallToContext(*child);
+      }
       return;
     }
     case ExpressionType::CONSTANT: {
@@ -150,6 +163,10 @@ auto Planner::PlanExpression(const BoundExpression &expr, const std::vector<Abst
       const auto &binary_op_expr = dynamic_cast<const BoundBinaryOp &>(expr);
       return std::make_tuple(UNNAMED_COLUMN, PlanBinaryOp(binary_op_expr, children));
     }
+    case ExpressionType::FUNC_CALL: {
+      const auto &func_call_expr = dynamic_cast<const BoundFuncCall &>(expr);
+      return std::make_tuple(UNNAMED_COLUMN, PlanFuncCall(func_call_expr, children));
+    }
     case ExpressionType::CONSTANT: {
       const auto &constant_expr = dynamic_cast<const BoundConstant &>(expr);
       return std::make_tuple(UNNAMED_COLUMN, PlanConstant(constant_expr, children));
@@ -158,6 +175,9 @@ auto Planner::PlanExpression(const BoundExpression &expr, const std::vector<Abst
       const auto &alias_expr = dynamic_cast<const BoundAlias &>(expr);
       auto [_1, expr] = PlanExpression(*alias_expr.child_, children);
       return std::make_tuple(alias_expr.alias_, std::move(expr));
+    }
+    case ExpressionType::WINDOW: {
+      throw Exception("should not parse window expressions here");
     }
     default:
       break;

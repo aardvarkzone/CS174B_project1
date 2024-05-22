@@ -12,6 +12,7 @@
 
 #include "buffer/lru_k_replacer.h"
 #include <climits>
+
 namespace bustub {
     // at top
     // class LRUKNode {
@@ -90,11 +91,11 @@ namespace bustub {
             evictedNode->second.is_evictable_ = set_evictable;
             curr_size_ += set_evictable ? 1 : -1;
         }
+    }
 
-        // if (node.IsEvictable() != set_evictable) {
-        //     node.SetEvictable(set_evictable);
-        //     curr_size_ += set_evictable ? 1 : -1;
-        // }
+
+void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {}
+
 
         latch_.unlock(); 
 

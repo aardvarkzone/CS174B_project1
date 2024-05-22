@@ -26,22 +26,18 @@ namespace bustub {
 enum class AccessType { Unknown = 0, Lookup, Scan, Index };
 
 class LRUKNode {
+
  public: 
   bool is_evictable_{false};
   std::vector<size_t> history_;
   frame_id_t fid_;
   size_t k_;
 
-
  private:
   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
   // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
 
 
-  
-  // [[maybe_unused]] size_t k_;
-  
-  // bool is_evictable_{false};
 };
 
 /**
@@ -82,8 +78,8 @@ class LRUKReplacer {
    * that are marked as 'evictable' are candidates for eviction.
    *
    * A frame with less than k historical references is given +inf as its backward k-distance.
-   * If multiple frames have inf backward k-distance, then evict the frame with the earliest
-   * timestamp overall.
+   * If multiple frames have inf backward k-distance, then evict frame with earliest timestamp
+   * based on LRU.
    *
    * Successful eviction of a frame should decrement the size of replacer and remove the frame's
    * access history.
@@ -103,8 +99,10 @@ class LRUKReplacer {
    * also use BUSTUB_ASSERT to abort the process if frame id is invalid.
    *
    * @param frame_id id of frame that received a new access.
+   * @param access_type type of access that was received. This parameter is only needed for
+   * leaderboard tests.
    */
-  void RecordAccess(frame_id_t frame_id);
+  void RecordAccess(frame_id_t frame_id, AccessType access_type = AccessType::Unknown);
 
   /**
    * TODO(P1): Add implementation
@@ -160,13 +158,14 @@ class LRUKReplacer {
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
+
   std::unordered_map<frame_id_t, LRUKNode> node_store_;
   size_t current_timestamp_{0};
   size_t curr_size_{0};
   size_t replacer_size_;
   size_t k_;
   std::mutex latch_;
-  
+
 };
 
 }  // namespace bustub

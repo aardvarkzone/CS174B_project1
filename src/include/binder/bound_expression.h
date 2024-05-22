@@ -21,6 +21,8 @@ enum class ExpressionType : uint8_t {
   UNARY_OP = 8,   /**< Unary expression type. */
   BINARY_OP = 9,  /**< Binary expression type. */
   ALIAS = 10,     /**< Alias expression type. */
+  FUNC_CALL = 11, /**< Function call expression type. */
+  WINDOW = 12,    /**< Window Aggregation expression type. */
 };
 
 /**
@@ -37,6 +39,8 @@ class BoundExpression {
   auto IsInvalid() const -> bool { return type_ == ExpressionType::INVALID; }
 
   virtual auto HasAggregation() const -> bool { UNREACHABLE("has aggregation should have been implemented!"); }
+
+  virtual auto HasWindowFunction() const -> bool { return false; }
 
   /** The type of this expression. */
   ExpressionType type_{ExpressionType::INVALID};
@@ -97,6 +101,12 @@ struct fmt::formatter<bustub::ExpressionType> : formatter<string_view> {
         break;
       case bustub::ExpressionType::ALIAS:
         name = "Alias";
+        break;
+      case bustub::ExpressionType::FUNC_CALL:
+        name = "FuncCall";
+        break;
+      case bustub::ExpressionType::WINDOW:
+        name = "Window";
         break;
     }
     return formatter<string_view>::format(name, ctx);

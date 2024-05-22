@@ -12,8 +12,6 @@
 #include "execution/expressions/abstract_expression.h"
 #include "execution/plans/abstract_plan.h"
 
-#define BUSTUB_OPTIMIZER_HACK_REMOVE_AFTER_2022_FALL
-
 namespace bustub {
 
 /**
@@ -78,16 +76,29 @@ class Optimizer {
       -> AbstractExpressionRef;
 
   /** @brief check if the predicate is true::boolean */
-  auto IsPredicateTrue(const AbstractExpression &expr) -> bool;
+  auto IsPredicateTrue(const AbstractExpressionRef &expr) -> bool;
 
   /**
    * @brief optimize order by as index scan if there's an index on a table
    */
   auto OptimizeOrderByAsIndexScan(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef;
 
+  /**
+   * @brief optimize seq scan as index scan if there's an index on a table
+   * @note Fall 2023 only: using hash index and only support point lookup
+   */
+  auto OptimizeSeqScanAsIndexScan(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef;
+
   /** @brief check if the index can be matched */
   auto MatchIndex(const std::string &table_name, uint32_t index_key_idx)
       -> std::optional<std::tuple<index_oid_t, std::string>>;
+
+  /**
+   * @brief column pruning for child plan following a projection plan
+   * @param plan the plan to optimize
+   * @return the new plan with column pruning
+   */
+  auto OptimizeColumnPruning(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef;
 
   /**
    * @brief optimize sort + limit as top N
