@@ -11,8 +11,10 @@
 #include <set>
 #include <thread>  // NOLINT
 #include <vector>
-
 #include "gtest/gtest.h"
+
+
+#include <stdio.h>
 
 namespace bustub {
 
@@ -70,7 +72,6 @@ TEST(LRUKReplacerTest, SampleTest) {
   lru_replacer.Evict(&value);
   ASSERT_EQ(6, value);
   ASSERT_EQ(3, lru_replacer.Size());
-
   // Now we have [1,5,4]. Continue looking for victims.
   lru_replacer.SetEvictable(1, false);
   ASSERT_EQ(2, lru_replacer.Size());

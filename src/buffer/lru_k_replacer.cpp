@@ -15,26 +15,6 @@
 
 namespace bustub {
     // at top
-    // class LRUKNode {
-    //  private:
-    //   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
-    //   // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
-    
-
-    //   [[maybe_unused]] std::list<size_t> history_;
-    //   [[maybe_unused]] size_t k_;
-    //   [[maybe_unused]] frame_id_t fid_;
-    //   [[maybe_unused]] bool is_evictable_{false};
-    // };
-
-    //private at bottom
-    //  [[maybe_unused]] std::unordered_map<frame_id_t, LRUKNode> node_store_;
-    //   [[maybe_unused]] size_t current_timestamp_{0};
-    //   [[maybe_unused]] size_t curr_size_{0};
-    //   [[maybe_unused]] size_t replacer_size_;
-    //   [[maybe_unused]] size_t k_;
-    //   [[maybe_unused]] std::mutex latch_;
-
 
     LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k) {}
 
@@ -47,25 +27,30 @@ namespace bustub {
             latch_.unlock();
             return false;
         }
-        size_t leastRecentAccess = INT_MAX;
+        size_t leastRecentAccess = SIZE_MAX;
         LRUKNode theNode;
-        for (auto &[fid, node] : node_store_) {
-            if(node.is_evictable_) {
-                size_t access =  node.history_.at(((node.history_.size() / k_) * k_) - 1);
-                if(access < leastRecentAccess) {
-                    theNode = node;         
-                    leastRecentAccess = access;            
-                }                    
+        for(size_t i = 0; i < replacer_size_; i++) {
+            auto node = node_store_.find(i);
+            if(node != node_store_.end() && node->second.is_evictable_) {
+                if(node->second.history_.size() >= k_) {
+                    size_t access =  node->second.history_.at(((node->second.history_.size() / k_) * k_) - 1);
+                    if(access < leastRecentAccess) {
+                        theNode = node->second;         
+                        leastRecentAccess = access;            
+                    }           
+                } else {
+                    theNode = node->second;
+                    break;
+                }
+                       
             } 
-            
         }
-
-        frame_id = &theNode.fid_;
+        *frame_id = theNode.fid_;
         this->Remove(*frame_id);
         
         
         latch_.unlock();
-        return false; 
+        return true; 
     }
     /*Record that given frame id is accessed at current timestamp.
     ◦ Called after a page is pinned in the BufferPoolManager*/
@@ -75,6 +60,13 @@ namespace bustub {
         if(node != node_store_.end()) {
             node->second.history_.push_back(current_timestamp_);
             current_timestamp_++;
+        } else {
+            LRUKNode l;
+            l.history_.push_back(current_timestamp_);
+            l.is_evictable_ = false;
+            l.fid_ = frame_id;
+            l.k_ = k_;
+            node_store_.insert({frame_id, l});
         }
         latch_.unlock();
     }
@@ -86,26 +78,31 @@ namespace bustub {
     corresponding frame is marked evictable and replacer’s size is incremented.*/
     void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
         latch_.lock();
+
         auto evictedNode = node_store_.find(frame_id);
         if(evictedNode != node_store_.end()) {
+            if(evictedNode->second.is_evictable_ && !set_evictable) {
+                curr_size_ -= 1;
+
+            } else if(!evictedNode->second.is_evictable_ && set_evictable){
+                curr_size_ += 1;
+
+            }
+            //otherwise don't fuck w size aka in the case that you stay the same
             evictedNode->second.is_evictable_ = set_evictable;
-            curr_size_ += set_evictable ? 1 : -1;
         }
-    }
-
-
-void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {}
-
+    
 
         latch_.unlock(); 
 
     }
 
     void LRUKReplacer::Remove(frame_id_t frame_id) {
-        latch_.lock();
+        //TODO NEED TO FIX THIS TO BE A COND VAR
+        // latch_.lock();
         node_store_.erase(frame_id);
         --curr_size_;
-        latch_.unlock();
+        //latch_.unlock();
     }
 
     /*This method returns the number of evictable frames that are currently in the LRUKReplacer.*/

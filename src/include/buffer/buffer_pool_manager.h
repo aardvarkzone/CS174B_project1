@@ -178,7 +178,8 @@ class BufferPoolManager {
   const size_t pool_size_;
   /** The next page id to be allocated  */
   std::atomic<page_id_t> next_page_id_ = 0;
-
+  //i added this
+  DiskManager * diskManager;
   /** Array of buffer pool pages. */
   Page *pages_;
   /** Pointer to the disk sheduler. */
